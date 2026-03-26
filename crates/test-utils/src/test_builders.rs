@@ -33,7 +33,8 @@ macro_rules! stack {
 /// specified stack and advice inputs.
 ///
 /// Parameters are expected in the following order:
-/// `source`, `stack_inputs` (optional), `advice_stack` (optional), `merkle_store` (optional)
+/// `source`, `stack_inputs` (optional), `advice_stack` (optional), `merkle_store` (optional),
+/// `kernel = kernel_source` (optional)
 ///
 /// * `source`: a string of one or more operations, e.g. "push.1 push.2".
 /// * `stack_inputs` (optional): the initial inputs which must be at the top of the stack before
@@ -42,6 +43,7 @@ macro_rules! stack {
 ///   `merkle_store` are also expected.
 /// * `merkle_store` (optional): the initial merkle set values. When provided, `stack_inputs` and
 ///   `advice_stack` are also expected.
+/// * `kernel = kernel_source` (optional): kernel source code to assemble and link for the test.
 #[macro_export]
 macro_rules! build_op_test {
     ($op_str:expr) => {{
@@ -86,7 +88,8 @@ begin {} exec.truncate_stack end",
 /// stack and advice inputs.
 ///
 /// Parameters are expected in the following order:
-/// `source`, `stack_inputs` (optional), `advice_stack` (optional), `merkle_store` (optional)
+/// `source`, `stack_inputs` (optional), `advice_stack` (optional), `merkle_store` (optional),
+/// `kernel = kernel_source` (optional)
 ///
 /// * `source`: a well-formed source string.
 /// * `stack_inputs` (optional): the initial inputs which must be at the top of the stack before
@@ -95,6 +98,7 @@ begin {} exec.truncate_stack end",
 ///   `merkle_store` are also expected.
 /// * `merkle_store` (optional): the initial merkle set values. When provided, `stack_inputs` and
 ///   `advice_stack` are also expected.
+/// * `kernel = kernel_source` (optional): kernel source code to assemble and link for the test.
 #[macro_export]
 macro_rules! build_test {
     ($($params:tt)+) => {{
@@ -106,7 +110,8 @@ macro_rules! build_test {
 /// and advice inputs.
 ///
 /// Parameters are expected in the following order:
-/// `source`, `stack_inputs` (optional), `advice_stack` (optional), `merkle_store` (optional)
+/// `source`, `stack_inputs` (optional), `advice_stack` (optional), `merkle_store` (optional),
+/// `kernel = kernel_source` (optional)
 ///
 /// * `source`: a well-formed source string.
 /// * `stack_inputs` (optional): the initial inputs which must be at the top of the stack before
@@ -115,6 +120,7 @@ macro_rules! build_test {
 ///   `merkle_store` are also expected.
 /// * `merkle_store` (optional): the initial merkle set values. When provided, `stack_inputs` and
 ///   `advice_stack` are also expected.
+/// * `kernel = kernel_source` (optional): kernel source code to assemble and link for the test.
 ///
 /// NOTE: use `miden_core_lib::tests::build_debug_test` to include the core library in the test.
 #[macro_export]
@@ -135,6 +141,60 @@ macro_rules! build_debug_test {
 /// Instead, the build_test and build_debug_test wrappers should be used.
 #[macro_export]
 macro_rules! build_test_by_mode {
+    ($in_debug_mode:expr, $source:expr, kernel = $kernel_source:expr) => {{
+        $crate::build_test_by_mode!($in_debug_mode, $source)
+            .with_kernel_source(format!("kernel{}", line!()), $kernel_source)
+    }};
+    ($in_debug_mode:expr, $source:expr, $stack_inputs:expr, kernel = $kernel_source:expr) => {{
+        $crate::build_test_by_mode!($in_debug_mode, $source, $stack_inputs)
+            .with_kernel_source(format!("kernel{}", line!()), $kernel_source)
+    }};
+    (
+        $in_debug_mode:expr,
+        $source:expr,
+        $stack_inputs:expr,
+        $advice_stack:expr,
+        kernel = $kernel_source:expr
+    ) => {{
+        $crate::build_test_by_mode!($in_debug_mode, $source, $stack_inputs, $advice_stack)
+            .with_kernel_source(format!("kernel{}", line!()), $kernel_source)
+    }};
+    (
+        $in_debug_mode:expr,
+        $source:expr,
+        $stack_inputs:expr,
+        $advice_stack:expr,
+        $advice_merkle_store:expr,
+        kernel = $kernel_source:expr
+    ) => {{
+        $crate::build_test_by_mode!(
+            $in_debug_mode,
+            $source,
+            $stack_inputs,
+            $advice_stack,
+            $advice_merkle_store
+        )
+        .with_kernel_source(format!("kernel{}", line!()), $kernel_source)
+    }};
+    (
+        $in_debug_mode:expr,
+        $source:expr,
+        $stack_inputs:expr,
+        $advice_stack:expr,
+        $advice_merkle_store:expr,
+        $advice_map:expr,
+        kernel = $kernel_source:expr
+    ) => {{
+        $crate::build_test_by_mode!(
+            $in_debug_mode,
+            $source,
+            $stack_inputs,
+            $advice_stack,
+            $advice_merkle_store,
+            $advice_map
+        )
+        .with_kernel_source(format!("kernel{}", line!()), $kernel_source)
+    }};
     ($in_debug_mode:expr, $source:expr) => {{
         let name = format!("test{}", line!());
         $crate::Test::new(&name, $source, $in_debug_mode)
